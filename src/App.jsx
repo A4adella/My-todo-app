@@ -7,7 +7,7 @@ import ErrorTest from "./pages/ErrorTest";
 import { lazy, Suspense } from "react";
 
 // Lazy-loaded components
-const TodoList = lazy(() => import("./components/todoList"));
+const TodoList = lazy(() => import("./components/todolist"));
 const TodoDetail = lazy(() => import("./pages/TodoDetail"));
 
 
