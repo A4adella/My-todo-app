@@ -1,8 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./index.css";
-import NotFound from "./pages/NotFound.jsx";
-import { ErrorBoundary } from "./components/Errorboundary.jsx";
+import NotFound from "./pages/Notfound";
+import { ErrorBoundary } from "./components/Errorboundary";
 import ErrorTest from "./pages/ErrorTest";
 import { lazy, Suspense } from "react";
 
