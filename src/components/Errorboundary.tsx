@@ -1,17 +1,25 @@
 import React from "react";
-import { Alert , AlertTitle , AlertDescription} from "@/components/ui/alert"
+import { Alert , AlertTitle , AlertDescription} from "./ui/alert"
 import { AlertTriangle } from "lucide-react";
-import { Button} from "@/components/ui/button"
+import { Button} from "../components/ui/button"
 import { Link, useLocation } from "react-router-dom";
+import type { Location } from "react-router-dom";
 
-
-class ErrorBoundaryCore extends React.Component {
-  constructor(props) {
+type ErrorBoundaryCoreProps ={
+  children: React.ReactNode;
+  location: Location;
+}
+type ErrorBoundaryCoreState = {
+  hasError: boolean;
+  error: Error | null;
+};
+class ErrorBoundaryCore extends React.Component<ErrorBoundaryCoreProps, ErrorBoundaryCoreState> {
+  constructor(props:ErrorBoundaryCoreProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error:Error): ErrorBoundaryCoreState {
     // Update state so next render shows fallback UI
     return { hasError: true, error };
   }
@@ -21,14 +29,13 @@ class ErrorBoundaryCore extends React.Component {
     window.location.reload();
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: Error, errorInfo:React.ErrorInfo) {
     // Log error to  console
     console.error("Error caught in ErrorBoundary:", error, errorInfo);
   }
-  componentDidUpdate(prevProps){
-    //Reset if route changed
-    if (prevProps.location.pathname !== this.props.location.pathname){
-        this.setState({hasError: false, error: null})
+componentDidUpdate(prevProps: ErrorBoundaryCoreProps) {
+    if (prevProps.location.pathname !== this.props.location.pathname) {
+      this.setState({ hasError: false, error: null });
     }
   }
 
@@ -40,21 +47,21 @@ class ErrorBoundaryCore extends React.Component {
                 <Alert variant="destructive" className="flex flex-col justify-between">
                     <div className="flex flex-row justify-center items-center gap-3 mb-5">
                         <AlertTriangle className="h-5 w-5 text-destructive"/>
-                        <AlertTitle>Something went wrong </AlertTitle>
+                        <AlertTitle className="alert">Something went wrong </AlertTitle>
                     </div> 
-                    <AlertDescription>
+                    <AlertDescription className="description">
                         {this.state.error?.message || "An unexpected error occurred."}
                     </AlertDescription>
                 </Alert>
 
                 <div className="space-x-3 flex justify-center ">
                     <Link to="/">
-                    <Button variant="outline" className="hover:cursor-pointer bg ">
+                    <Button  size="normal" variant="outline" className="hover:cursor-pointer bg ">
                         Back to Home
                     </Button>
                     </Link>
 
-                    <Button onClick={this.handleReload} variant="destructive" className="hover:cursor-pointer">
+                    <Button size="normal" onClick={this.handleReload} variant="destructive" className="hover:cursor-pointer">
                         Reload Page
                     </Button>
                     </div>
@@ -67,8 +74,9 @@ class ErrorBoundaryCore extends React.Component {
   }
 }
 
-export function ErrorBoundary({ children }) {
-    const location = useLocation();
-    return <ErrorBoundaryCore location={location}>{children}</ErrorBoundaryCore>
+export function ErrorBoundary({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  return <ErrorBoundaryCore location={location}>{children}</ErrorBoundaryCore>;
 }
+
 

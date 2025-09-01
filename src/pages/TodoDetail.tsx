@@ -1,14 +1,13 @@
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
+import { Skeleton } from "../components/ui/skeleton";
+import { Button } from "../components/ui/button";
 import {
   CheckCircle,
   XCircle,
-  LoaderCircle,
   ArrowLeft,
   ClipboardList,
 } from "lucide-react";
@@ -66,6 +65,7 @@ export default function TodoDetail() {
             <XCircle className="text-red-600 w-5 h-5" />
           )}
           <Badge
+          variant="outline"
             className={`text-xs ${
               todo.completed
                 ? "bg-green-100 text-green-700"
@@ -77,7 +77,7 @@ export default function TodoDetail() {
         </div>
       </div>
 
-      <Button asChild variant="outline" className="flex items-center gap-2">
+      <Button size="normal" asChild variant="outline" className="flex items-center gap-2">
         <Link to="/">
           <ArrowLeft className="w-4 h-4" />
           Back to List

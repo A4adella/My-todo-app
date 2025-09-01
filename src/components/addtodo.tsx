@@ -1,20 +1,22 @@
-import React, { useState } from "react";
+import  { useState } from "react";
 import axios from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
 
 function AddTodo() {
   const [title, setTitle] = useState("");
   const queryClient = useQueryClient();
 
-  const { mutate, isLoading } = useMutation({
-    mutationFn: (newTodo) =>
+  type Todo = { title: string; completed: boolean };
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (newTodo: Todo) =>
       axios.post("https://jsonplaceholder.typicode.com/todos", newTodo),
     onSuccess: (data) => {
       // Optimistically add the new todo to the cache
-      queryClient.setQueryData(["todos"], (old = []) => [data.data, ...old]);
+      queryClient.setQueryData(["todos"], (old: Todo[] = []) => [data.data, ...old]);
       setTitle("");
     },
     onError: (err) => {
@@ -38,8 +40,8 @@ function AddTodo() {
           onChange={(e) => setTitle(e.target.value)}
           className="flex-1"
         />
-        <Button type="submit" disabled={isLoading} className="bg-indigo-500 cursor-pointer">
-          {isLoading ? "Adding..." : "Add Todo"}
+        <Button variant="" size="" type="submit" disabled={isPending} className="bg-indigo-500 cursor-pointer">
+          {isPending ? "Adding..." : "Add Todo"}
         </Button>
       </form>
     </Card>

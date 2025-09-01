@@ -5,56 +5,89 @@ import { Link } from "react-router-dom";
 import { Search, Trash2, CheckCircle } from "lucide-react";
 import { Pen } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
+import { Input } from "../components/ui/input";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "../components/ui/select";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { Skeleton } from "../components/ui/skeleton";
 import EditTodoModal from "./EditTodoModal";
 import AddTodo from "./addtodo";
 
 
 const TODOS_PER_PAGE = 10;
 
+// -----------------------------
+// Safe fetch with cache handling
+// -----------------------------
 const fetchTodos = async () => {
   const cachedTodos = localStorage.getItem("cachedTodos");
 
-  // Return cached todos if they exist
   if (cachedTodos) {
-    console.log("Loaded from localStorage");
-    return JSON.parse(cachedTodos);
+    try {
+      console.log("Loaded from localStorage");
+      return JSON.parse(cachedTodos);
+    } catch (err) {
+      console.error("❌ Failed to parse cache:", err);
+      localStorage.removeItem("cachedTodos");
+    }
   }
 
-  // Fetch from API if not cached
-  const response = await axios.get("https://jsonplaceholder.typicode.com/todos");
+  const response = await axios.get(
+    "https://jsonplaceholder.typicode.com/todos"
+  );
   const todos = response.data;
 
-  // Cache in localStorage
   localStorage.setItem("cachedTodos", JSON.stringify(todos));
-
   console.log("Fetched from API and cached");
+
   return todos;
 };
 
+// -----------------------------
+// Search Input component
+// -----------------------------
+interface SearchInputProps {
+  searchQuery: string;
+  setSearchQuery: React.Dispatch<React.SetStateAction<string>>;
+}
 
+const SearchInput: React.FC<SearchInputProps> = ({
+  searchQuery,
+  setSearchQuery,
+}) => (
+  <div className="relative w-full">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <Input
+      type="text"
+      placeholder="Search todos..."
+      className="border rounded py-2 pl-10 pr-3 border-gray-300 w-full"
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+    />
+  </div>
+);
+
+// -----------------------------
+// TodoList main component
+// -----------------------------
 function TodoList() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [editingTodo, setEditingTodo] = useState(null);
-  const closeEditModal = () => setEditingTodo(null);
-  const [hasCache, setHasCache] = useState(() =>
-  Boolean(localStorage.getItem("cachedTodos"))
-);
+  const [editingTodo, setEditingTodo] = useState<any>(null);
+  const [hasCache, setHasCache] = useState(
+    Boolean(localStorage.getItem("cachedTodos"))
+  );
 
+  const closeEditModal = () => setEditingTodo(null);
 
   const {
     data: todos = [],
@@ -69,34 +102,40 @@ function TodoList() {
   });
 
   const deleteTodo = useMutation({
-    mutationFn: (id) =>
+    mutationFn: (id: number) =>
       axios.delete(`https://jsonplaceholder.typicode.com/todos/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
     },
   });
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: number) => {
     if (confirm("Are you sure you want to delete this todo?")) {
       deleteTodo.mutate(id);
     }
   };
 
-  const filteredTodos = todos.filter((todo) => {
-    const matchesSearch = todo.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      filterStatus === "all"
-        ? true
-        : filterStatus === "complete"
-        ? todo.completed
-        : !todo.completed;
+  // -----------------------------
+  // Safe filtering + pagination
+  // -----------------------------
+  const safeTodos = Array.isArray(todos) ? todos : [];
+  const filteredTodos = safeTodos.filter(
+    (todo: { title: string; completed: boolean }) => {
+      const matchesSearch = todo.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesFilter =
+        filterStatus === "all"
+          ? true
+          : filterStatus === "complete"
+          ? todo.completed
+          : !todo.completed;
 
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    }
+  );
 
-  const totalPages = Math.ceil(filteredTodos.length / TODOS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredTodos.length / TODOS_PER_PAGE));
   const startIndex = (currentPage - 1) * TODOS_PER_PAGE;
   const currentTodos = filteredTodos.slice(
     startIndex,
@@ -111,6 +150,9 @@ function TodoList() {
     if (currentPage > 1) setCurrentPage((prev) => prev - 1);
   };
 
+  // -----------------------------
+  // Loading state
+  // -----------------------------
   if (isLoading) {
     return (
       <Card className="p-6 max-w-3xl mx-auto">
@@ -122,10 +164,32 @@ function TodoList() {
     );
   }
 
-  if (error)
-    return <p className="text-red-500 text-center mt-50 text-bold">Failed to fetch todos.</p>;
+  // -----------------------------
+  // Error state
+  // -----------------------------
+  if (error) {
+    return (
+      <Card className="p-6 max-w-3xl mx-auto text-center space-y-4">
+        <AddTodo />
+        <p className="text-red-500 font-bold">Failed to fetch todos.</p>
+        <Button
+          onClick={() =>
+            queryClient.invalidateQueries({ queryKey: ["todos"] })
+          }
+          variant="outline"
+          className=""
+          size="default"
+        >
+          Retry
+        </Button>
+      </Card>
+    );
+  }
 
-  return (
+  // -----------------------------
+  // Main UI
+  // -----------------------------
+ return (
     <>
       <header className="mb-8 text-center mt-10">
         <h1 className="text-3xl font-bold text-indigo-700 mb-2">TodoMaster</h1>
@@ -135,23 +199,14 @@ function TodoList() {
   <AddTodo />
 
 
-
-      <Card className="p-6 max-w-3xl mx-auto bg-white shadow ml-10px">
+         <Card className="p-6 max-w-3xl mx-auto bg-white shadow ml-10px">
         <h1 className="text-2xl font-bold text-center text-indigo-600 mb-4">
           Todo List
         </h1>
 
         {/* Filter and Search */}
         <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Search todos..."
-              className="border rounded  py-2 pl-10 pr-3  s border-gray-300  w-full"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <SearchInput searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
           <Select
             name="filter-status"
@@ -163,13 +218,14 @@ function TodoList() {
             <SelectTrigger className="md:w-[180px]">
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="complete">Completed</SelectItem>
-              <SelectItem value="incomplete">Incomplete</SelectItem>
+            <SelectContent className={undefined}>
+              <SelectItem value="all" className={undefined} >All</SelectItem>
+              <SelectItem value="complete" className={undefined}>Completed</SelectItem>
+              <SelectItem value="incomplete" className={undefined} >Incomplete</SelectItem>
             </SelectContent>
           </Select>
         </div>
+    
 
         {/* Todo List */}
         <ul className="space-y-4">
@@ -206,12 +262,9 @@ function TodoList() {
                 </Button>
 
                 <Badge
-                  className={`${
-                    todo.completed
+                  className={`${todo.completed
                       ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
+                      : "bg-red-100 text-red-800"}`} variant={undefined}                >
                   {todo.completed ? "Complete" : "Incomplete"}
                 </Badge>
 
@@ -247,8 +300,7 @@ function TodoList() {
             onClick={handlePrevious}
             disabled={currentPage === 1}
             variant="outline"
-            className="hover:text-gray-500 cursor-pointer bg-indigo-600 text-white"
-          >
+            className="hover:text-gray-500 cursor-pointer bg-indigo-600 text-white" size={undefined}          >
             Previous
           </Button>
           <span className="text-sm text-gray-600">
@@ -258,8 +310,7 @@ function TodoList() {
             onClick={handleNext}
             disabled={currentPage === totalPages}
             variant="outline"
-            className="hover:text-gray-500 cursor-pointer bg-indigo-600 text-white"
-          >
+            className="hover:text-gray-500 cursor-pointer bg-indigo-600 text-white" size={undefined}          >
             Next
           </Button>
         </div>
@@ -267,15 +318,14 @@ function TodoList() {
       <footer>{hasCache && (
     <div className="flex justify-center mb-4">
     <Button
-      onClick={() => {
-          setHasCache(false); 
-        localStorage.removeItem("cachedTodos");
-        queryClient.invalidateQueries({ queryKey: ["todos"] });
-      }}
-      variant="outline"
-      className="text-sm"
-      aria-label= "Refresh Todos"
-    >
+            onClick={() => {
+              setHasCache(false);
+              localStorage.removeItem("cachedTodos");
+              queryClient.invalidateQueries({ queryKey: ["todos"] });
+            } }
+            variant="outline"
+            className="text-sm"
+            aria-label="Refresh Todos" size={undefined}    >
     Refresh Todos 
     </Button>
   </div>
@@ -286,3 +336,5 @@ function TodoList() {
 }
 
 export default TodoList;
+
+
